@@ -13,21 +13,27 @@ fn main() {
         match udp_socket.recv_from(&mut buf) {
             Ok((size, source)) => {
                 println!("Received {} bytes from {}", size, source);
-                match Message::from_bytes(&buf[..size]) {
-                    Ok(message) => println!("Parsed DNS header: {:#?}", message.header),
-                    Err(err) => eprintln!("Failed to parse DNS message: {}", err),
+                let request = Message::from_bytes(&buf[..size]);
+                if let Err(err) = &request {
+                    eprintln!("Failed to parse DNS message: {}", err);
                 }
 
+                let request_header = request.as_ref().map(|m| &m.header);
+                let id = request_header.map_or(1234, |h| h.id);
+                let opcode = request_header.map_or(0, |h| h.opcode);
+                let rd = request_header.map_or(false, |h| h.rd);
+                let rcode = if opcode == 0 { 0 } else { 4 };
+
                 let response_header = Header {
-                    id: 1234,
+                    id,
                     qr: true,
-                    opcode: 0,
+                    opcode,
                     aa: false,
                     tc: false,
-                    rd: false,
+                    rd,
                     ra: false,
                     z: 0,
-                    rcode: 0,
+                    rcode,
                     qdcount: 1,
                     ancount: 1,
                     nscount: 0,
