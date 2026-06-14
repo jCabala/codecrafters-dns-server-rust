@@ -42,7 +42,7 @@ fn main() {
                     })
                     .unwrap_or_default();
                 
-                let answers = match resolver{
+                let answers = match &resolver {
                     None => {
                         // Send dummy answers
                         questions
@@ -59,9 +59,9 @@ fn main() {
                     Some(resolver_addr) => {
                         // Forward to resolver
                         udp_socket.send_to(&client_buf[..size], resolver_addr).expect("Failed to send response to resolver");
-                        let (resolver_size, resolver_source) = udp_socket.recv_from(&mut resolver_buf).expect("Failed to receive message from resolver");
+                        let (resolver_size, _resolver_source) = udp_socket.recv_from(&mut resolver_buf).expect("Failed to receive message from resolver");
                         
-                        let resolver_response = Message::from_bytes(resolver_buf).expect("Failed to parse resolver response");   
+                        let resolver_response = Message::from_bytes(&resolver_buf[..resolver_size]).expect("Failed to parse resolver response");   
                         resolver_response.answers
                     }
                 };
