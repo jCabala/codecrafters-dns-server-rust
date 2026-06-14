@@ -1,7 +1,7 @@
 mod message;
 
 use std::net::UdpSocket;
-use crate::message::{Header, Message, Question};
+use crate::message::{Answer, Header, Message, Question};
 
 fn main() {
     println!("Logs from your program will appear here!");
@@ -29,7 +29,7 @@ fn main() {
                     z: 0,
                     rcode: 0,
                     qdcount: 1,
-                    ancount: 0,
+                    ancount: 1,
                     nscount: 0,
                     arcount: 0,
                 };
@@ -39,6 +39,13 @@ fn main() {
                         name: "codecrafters.io".to_string(),
                         qtype: 1,
                         qclass: 1,
+                    }],
+                    answers: vec![Answer {
+                        name: "codecrafters.io".to_string(),
+                        rtype: 1,
+                        rclass: 1,
+                        ttl: 60,
+                        rdata: vec![8, 8, 8, 8],
                     }],
                 }
                 .to_bytes();

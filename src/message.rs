@@ -25,21 +25,48 @@ pub struct Question {
 }
 
 #[derive(Debug, PartialEq, Eq)]
+pub struct Answer {
+    pub name: String,
+    pub rtype: u16,
+    pub rclass: u16,
+    pub ttl: u32,
+    pub rdata: Vec<u8>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
 pub struct Message {
     pub header: Header,
     pub questions: Vec<Question>,
+    pub answers: Vec<Answer>,
+}
+
+fn encode_name(name: &str) -> Vec<u8> {
+    let mut bytes = Vec::new();
+    for label in name.split('.') {
+        bytes.push(label.len() as u8);
+        bytes.extend_from_slice(label.as_bytes());
+    }
+    bytes.push(0);
+    bytes
 }
 
 impl Question {
     pub fn to_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::new();
-        for label in self.name.split('.') {
-            bytes.push(label.len() as u8);
-            bytes.extend_from_slice(label.as_bytes());
-        }
-        bytes.push(0);
+        let mut bytes = encode_name(&self.name);
         bytes.extend_from_slice(&self.qtype.to_be_bytes());
         bytes.extend_from_slice(&self.qclass.to_be_bytes());
+        bytes
+    }
+}
+
+impl Answer {
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = encode_name(&self.name);
+        bytes.extend_from_slice(&self.rtype.to_be_bytes());
+        bytes.extend_from_slice(&self.rclass.to_be_bytes());
+        bytes.extend_from_slice(&self.ttl.to_be_bytes());
+        bytes.extend_from_slice(&(self.rdata.len() as u16).to_be_bytes());
+        bytes.extend_from_slice(&self.rdata);
         bytes
     }
 }
@@ -112,6 +139,7 @@ impl Message {
         Ok(Message {
             header,
             questions: Vec::new(),
+            answers: Vec::new(),
         })
     }
 
@@ -119,6 +147,9 @@ impl Message {
         let mut bytes = self.header.to_bytes().to_vec();
         for question in &self.questions {
             bytes.extend(question.to_bytes());
+        }
+        for answer in &self.answers {
+            bytes.extend(answer.to_bytes());
         }
         bytes
     }
