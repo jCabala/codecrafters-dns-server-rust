@@ -6,8 +6,13 @@ use crate::message::{Answer, Header, Message, Question};
 fn main() {
     println!("Logs from your program will appear here!");
 
-    // Store the resolver flag (--resolver) in a variable or none if not present
-    let resolver = std::env::args().find(|arg| arg == "--resolver");
+    // Store the resolver address (the value after --resolver) or none if not present
+    let args: Vec<String> = std::env::args().collect();
+    let resolver = args
+        .iter()
+        .position(|arg| arg == "--resolver")
+        .and_then(|i| args.get(i + 1))
+        .cloned();
     let udp_socket = UdpSocket::bind("127.0.0.1:2053").expect("Failed to bind to address");
     
     let mut client_buf = [0; 512];
