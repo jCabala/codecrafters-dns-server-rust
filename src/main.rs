@@ -6,14 +6,18 @@ use crate::message::{Answer, Header, Message, Question};
 fn main() {
     println!("Logs from your program will appear here!");
 
+    // Store the resolver flag (--resolver) in a variable or none if not present
+    let resolver = std::env::args().find(|arg| arg == "--resolver");
     let udp_socket = UdpSocket::bind("127.0.0.1:2053").expect("Failed to bind to address");
-    let mut buf = [0; 512];
+    
+    let mut client_buf = [0; 512];
+    let mut resolver_buf = [0; 512];
 
     loop {
-        match udp_socket.recv_from(&mut buf) {
+        match udp_socket.recv_from(&mut client_buf) {
             Ok((size, source)) => {
                 println!("Received {} bytes from {}", size, source);
-                let request = Message::from_bytes(&buf[..size]);
+                let request = Message::from_bytes(&client_buf[..size]);
                 if let Err(err) = &request {
                     eprintln!("Failed to parse DNS message: {}", err);
                 }
@@ -37,17 +41,31 @@ fn main() {
                             .collect()
                     })
                     .unwrap_or_default();
+                
+                let answers = match resolver{
+                    None => {
+                        // Send dummy answers
+                        questions
+                            .iter()
+                            .map(|q| Answer {
+                                name: q.name.clone(),
+                                rtype: 1,
+                                rclass: 1,
+                                ttl: 60,
+                                rdata: vec![8, 8, 8, 8],
+                            })
+                            .collect()
+                    }
+                    Some(resolver_addr) => {
+                        // Forward to resolver
+                        udp_socket.send_to(&client_buf[..size], resolver_addr).expect("Failed to send response to resolver");
+                        let (resolver_size, resolver_source) = udp_socket.recv_from(&mut resolver_buf).expect("Failed to receive message from resolver");
+                        
+                        let resolver_response = Message::from_bytes(resolver_buf).expect("Failed to parse resolver response");   
+                        resolver_response.answers
+                    }
+                };
 
-                let answers: Vec<Answer> = questions
-                    .iter()
-                    .map(|q| Answer {
-                        name: q.name.clone(),
-                        rtype: 1,
-                        rclass: 1,
-                        ttl: 60,
-                        rdata: vec![8, 8, 8, 8],
-                    })
-                    .collect();
 
                 let response_header = Header {
                     id,
