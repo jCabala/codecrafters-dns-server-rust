@@ -50,12 +50,46 @@ fn encode_name(name: &str) -> Vec<u8> {
     bytes
 }
 
+fn decode_name(bytes: &[u8], mut offset: usize) -> Result<(String, usize)> {
+    let mut labels = Vec::new();
+    loop {
+        let len = *bytes
+            .get(offset)
+            .ok_or_else(|| anyhow!("Unexpected end of buffer while parsing name"))?
+            as usize;
+        offset += 1;
+
+        if len == 0 {
+            break;
+        }
+
+        let label = bytes
+            .get(offset..offset + len)
+            .ok_or_else(|| anyhow!("Label exceeds buffer length"))?;
+        labels.push(String::from_utf8_lossy(label).to_string());
+        offset += len;
+    }
+    Ok((labels.join("."), offset))
+}
+
 impl Question {
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = encode_name(&self.name);
         bytes.extend_from_slice(&self.qtype.to_be_bytes());
         bytes.extend_from_slice(&self.qclass.to_be_bytes());
         bytes
+    }
+
+    pub fn from_bytes(bytes: &[u8], offset: usize) -> Result<(Self, usize)> {
+        let (name, offset) = decode_name(bytes, offset)?;
+
+        let type_and_class = bytes
+            .get(offset..offset + 4)
+            .ok_or_else(|| anyhow!("Question section truncated"))?;
+        let qtype = u16::from_be_bytes([type_and_class[0], type_and_class[1]]);
+        let qclass = u16::from_be_bytes([type_and_class[2], type_and_class[3]]);
+
+        Ok((Question { name, qtype, qclass }, offset + 4))
     }
 }
 
@@ -136,9 +170,18 @@ impl Header {
 impl Message {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         let header = Header::from_bytes(bytes)?;
+
+        let mut offset = 12;
+        let mut questions = Vec::new();
+        for _ in 0..header.qdcount {
+            let (question, new_offset) = Question::from_bytes(bytes, offset)?;
+            questions.push(question);
+            offset = new_offset;
+        }
+
         Ok(Message {
             header,
-            questions: Vec::new(),
+            questions,
             answers: Vec::new(),
         })
     }
