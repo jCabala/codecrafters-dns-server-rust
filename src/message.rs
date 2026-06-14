@@ -18,8 +18,30 @@ pub struct Header {
 }
 
 #[derive(Debug, PartialEq, Eq)]
+pub struct Question {
+    pub name: String,
+    pub qtype: u16,
+    pub qclass: u16,
+}
+
+#[derive(Debug, PartialEq, Eq)]
 pub struct Message {
     pub header: Header,
+    pub questions: Vec<Question>,
+}
+
+impl Question {
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = Vec::new();
+        for label in self.name.split('.') {
+            bytes.push(label.len() as u8);
+            bytes.extend_from_slice(label.as_bytes());
+        }
+        bytes.push(0);
+        bytes.extend_from_slice(&self.qtype.to_be_bytes());
+        bytes.extend_from_slice(&self.qclass.to_be_bytes());
+        bytes
+    }
 }
 
 impl Header {
@@ -87,10 +109,17 @@ impl Header {
 impl Message {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         let header = Header::from_bytes(bytes)?;
-        Ok(Message { header })
+        Ok(Message {
+            header,
+            questions: Vec::new(),
+        })
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
-        self.header.to_bytes().to_vec()
+        let mut bytes = self.header.to_bytes().to_vec();
+        for question in &self.questions {
+            bytes.extend(question.to_bytes());
+        }
+        bytes
     }
 }

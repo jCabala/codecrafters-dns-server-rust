@@ -1,7 +1,7 @@
 mod message;
 
 use std::net::UdpSocket;
-use crate::message::{Header, Message};
+use crate::message::{Header, Message, Question};
 
 fn main() {
     println!("Logs from your program will appear here!");
@@ -28,13 +28,18 @@ fn main() {
                     ra: false,
                     z: 0,
                     rcode: 0,
-                    qdcount: 0,
+                    qdcount: 1,
                     ancount: 0,
                     nscount: 0,
                     arcount: 0,
                 };
                 let response = Message {
                     header: response_header,
+                    questions: vec![Question {
+                        name: "codecrafters.io".to_string(),
+                        qtype: 1,
+                        qclass: 1,
+                    }],
                 }
                 .to_bytes();
 
