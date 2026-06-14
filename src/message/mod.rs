@@ -29,10 +29,17 @@ impl Message {
             offset = new_offset;
         }
 
+        let mut answers = Vec::new();
+        for _ in 0..header.ancount {
+            let (answer, new_offset) = Answer::from_bytes(bytes, offset)?;
+            answers.push(answer);
+            offset = new_offset;
+        }
+
         Ok(Message {
             header,
             questions,
-            answers: Vec::new(),
+            answers,
         })
     }
 
