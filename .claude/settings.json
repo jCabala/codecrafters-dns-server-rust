@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(pkill -f target/debug/codecrafters-dns-server)"
+      "Bash(pkill -f target/debug/codecrafters-dns-server)",
+      "Bash(codecrafters --help)",
+      "Bash(timeout 120 codecrafters test)"
     ]
   }
 }

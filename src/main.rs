@@ -62,12 +62,48 @@ fn main() {
                             .collect()
                     }
                     Some(resolver_addr) => {
-                        // Forward to resolver
-                        udp_socket.send_to(&client_buf[..size], resolver_addr).expect("Failed to send response to resolver");
-                        let (resolver_size, _resolver_source) = udp_socket.recv_from(&mut resolver_buf).expect("Failed to receive message from resolver");
-                        
-                        let resolver_response = Message::from_bytes(&resolver_buf[..resolver_size]).expect("Failed to parse resolver response");   
-                        resolver_response.answers
+                        // The resolver only answers single-question queries, so forward each
+                        // question separately and merge the answers into one response.
+                        let mut answers = Vec::new();
+                        for question in &questions {
+                            let query = Message {
+                                header: Header {
+                                    id,
+                                    qr: false,
+                                    opcode,
+                                    aa: false,
+                                    tc: false,
+                                    rd,
+                                    ra: false,
+                                    z: 0,
+                                    rcode: 0,
+                                    qdcount: 1,
+                                    ancount: 0,
+                                    nscount: 0,
+                                    arcount: 0,
+                                },
+                                questions: vec![Question {
+                                    name: question.name.clone(),
+                                    qtype: question.qtype,
+                                    qclass: question.qclass,
+                                }],
+                                answers: vec![],
+                            }
+                            .to_bytes();
+
+                            udp_socket
+                                .send_to(&query, resolver_addr)
+                                .expect("Failed to send query to resolver");
+                            let (resolver_size, _resolver_source) = udp_socket
+                                .recv_from(&mut resolver_buf)
+                                .expect("Failed to receive message from resolver");
+
+                            let resolver_response =
+                                Message::from_bytes(&resolver_buf[..resolver_size])
+                                    .expect("Failed to parse resolver response");
+                            answers.extend(resolver_response.answers);
+                        }
+                        answers
                     }
                 };
 
