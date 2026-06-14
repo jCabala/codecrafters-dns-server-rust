@@ -23,6 +23,27 @@ pub struct Message {
 }
 
 impl Header {
+    pub fn to_bytes(&self) -> [u8; 12] {
+        let mut flags: u16 = 0;
+        flags |= (self.qr as u16) << 15;
+        flags |= (self.opcode as u16 & 0x0F) << 11;
+        flags |= (self.aa as u16) << 10;
+        flags |= (self.tc as u16) << 9;
+        flags |= (self.rd as u16) << 8;
+        flags |= (self.ra as u16) << 7;
+        flags |= (self.z as u16 & 0x07) << 4;
+        flags |= self.rcode as u16 & 0x0F;
+
+        let mut bytes = [0u8; 12];
+        bytes[0..2].copy_from_slice(&self.id.to_be_bytes());
+        bytes[2..4].copy_from_slice(&flags.to_be_bytes());
+        bytes[4..6].copy_from_slice(&self.qdcount.to_be_bytes());
+        bytes[6..8].copy_from_slice(&self.ancount.to_be_bytes());
+        bytes[8..10].copy_from_slice(&self.nscount.to_be_bytes());
+        bytes[10..12].copy_from_slice(&self.arcount.to_be_bytes());
+        bytes
+    }
+
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         if bytes.len() < 12 {
             return Err(anyhow!("DNS header must be at least 12 bytes long"));
@@ -67,5 +88,9 @@ impl Message {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         let header = Header::from_bytes(bytes)?;
         Ok(Message { header })
+    }
+
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.header.to_bytes().to_vec()
     }
 }
