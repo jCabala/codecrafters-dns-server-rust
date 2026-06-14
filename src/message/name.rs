@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use super::error::{MessageError, Result};
 
 // A length byte starting with 0b11 marks a compression pointer (RFC 1035 4.1.4);
 // the remaining 14 bits across both bytes encode the target offset.
@@ -21,14 +21,12 @@ pub fn decode_name(bytes: &[u8], start: usize) -> Result<(String, usize)> {
     let mut end_offset = None;
 
     loop {
-        let len_byte = *bytes
-            .get(pos)
-            .ok_or_else(|| anyhow!("Unexpected end of buffer while parsing name"))?;
+        let len_byte = *bytes.get(pos).ok_or(MessageError::UnexpectedEndOfName)?;
 
         if len_byte & POINTER_TAG == POINTER_TAG {
             let next = *bytes
                 .get(pos + 1)
-                .ok_or_else(|| anyhow!("Unexpected end of buffer while parsing name pointer"))?;
+                .ok_or(MessageError::UnexpectedEndOfPointer)?;
             if end_offset.is_none() {
                 end_offset = Some(pos + 2);
             }
@@ -45,7 +43,7 @@ pub fn decode_name(bytes: &[u8], start: usize) -> Result<(String, usize)> {
 
         let label = bytes
             .get(pos..pos + len)
-            .ok_or_else(|| anyhow!("Label exceeds buffer length"))?;
+            .ok_or(MessageError::LabelExceedsBuffer)?;
         labels.push(String::from_utf8_lossy(label).to_string());
         pos += len;
     }

@@ -1,13 +1,15 @@
 mod answer;
+mod error;
 mod header;
 mod name;
 mod question;
 
 pub use answer::Answer;
+pub use error::MessageError;
 pub use header::Header;
 pub use question::Question;
 
-use anyhow::Result;
+use error::Result;
 use header::HEADER_SIZE;
 
 #[derive(Debug, PartialEq, Eq)]

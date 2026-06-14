@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use super::error::{MessageError, Result};
 
 pub(super) const HEADER_SIZE: usize = 12;
 
@@ -16,7 +16,7 @@ const OPCODE_MASK: u16 = 0b1111;
 const Z_MASK: u16 = 0b111;
 const RCODE_MASK: u16 = 0b1111;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Default)]
 pub struct Header {
     pub id: u16,
     pub qr: bool,
@@ -57,7 +57,7 @@ impl Header {
 
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         if bytes.len() < HEADER_SIZE {
-            return Err(anyhow!("DNS header must be at least {HEADER_SIZE} bytes long"));
+            return Err(MessageError::HeaderTooShort(HEADER_SIZE));
         }
 
         let id = u16::from_be_bytes([bytes[0], bytes[1]]);

@@ -1,5 +1,4 @@
-use anyhow::{anyhow, Result};
-
+use super::error::{MessageError, Result};
 use super::name::{decode_name, encode_name};
 
 #[derive(Debug, PartialEq, Eq)]
@@ -27,7 +26,7 @@ impl Answer {
 
         let fixed_fields = bytes
             .get(offset..offset + 10)
-            .ok_or_else(|| anyhow!("Answer record truncated"))?;
+            .ok_or(MessageError::AnswerRecordTruncated)?;
         let rtype = u16::from_be_bytes([fixed_fields[0], fixed_fields[1]]);
         let rclass = u16::from_be_bytes([fixed_fields[2], fixed_fields[3]]);
         let ttl = u32::from_be_bytes([
@@ -41,7 +40,7 @@ impl Answer {
 
         let rdata = bytes
             .get(offset..offset + rdlength)
-            .ok_or_else(|| anyhow!("Answer record RDATA truncated"))?
+            .ok_or(MessageError::AnswerRdataTruncated)?
             .to_vec();
 
         Ok((

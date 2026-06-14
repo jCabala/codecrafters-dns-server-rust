@@ -1,5 +1,4 @@
-use anyhow::{anyhow, Result};
-
+use super::error::{MessageError, Result};
 use super::name::{decode_name, encode_name};
 
 #[derive(Debug, PartialEq, Eq)]
@@ -22,10 +21,17 @@ impl Question {
 
         let type_and_class = bytes
             .get(offset..offset + 4)
-            .ok_or_else(|| anyhow!("Question section truncated"))?;
+            .ok_or(MessageError::QuestionSectionTruncated)?;
         let qtype = u16::from_be_bytes([type_and_class[0], type_and_class[1]]);
         let qclass = u16::from_be_bytes([type_and_class[2], type_and_class[3]]);
 
-        Ok((Question { name, qtype, qclass }, offset + 4))
+        Ok((
+            Question {
+                name,
+                qtype,
+                qclass,
+            },
+            offset + 4,
+        ))
     }
 }
